@@ -9,6 +9,10 @@ using SFML.Graphics;
 
 namespace NoiseGenerator {
     class Program {
+        #region Constants
+        public static readonly Color CornflowerBlue = new Color(154, 206, 235);
+        #endregion
+
         private static VertexArray GetNoiseCurve(float spacing, float height) {
             VertexArray noiseCurve = new VertexArray(PrimitiveType.LinesStrip);
             for (int i = 0; i <= 500; i++) {
@@ -31,6 +35,12 @@ namespace NoiseGenerator {
         }
 
         static void Main(string[] args) {
+            float spacing = 5;
+            int height = 50;
+
+            VertexArray noiseCurve = GetNoiseCurve(spacing, height);
+            VertexArray underNoiseCurve = GetPointsUnderCurve(noiseCurve);
+
             #region Window/View
             RenderWindow window = new RenderWindow(new VideoMode(800, 600), "My Window");
             window.Closed += ((s, e) => window.Close());
@@ -39,17 +49,16 @@ namespace NoiseGenerator {
             view.Reset(new FloatRect(0, 0, 800, 600));
             #endregion
 
-            float spacing = 5;
-            int height = 50;
-
-            VertexArray noiseCurve = GetNoiseCurve(spacing, height);
-            VertexArray underNoiseCurve = GetPointsUnderCurve(noiseCurve);
 
             #region Text
             Font font = new Font("font.otf");
             Text text = new Text(String.Format("Current Spacing: {0}\nCurrent Height: {1}", spacing, height), font, 20);
-            text.Position = new Vector2f(50, 50);
+            text.Position = new Vector2f(200, 150);
             text.Color = Color.Black;
+
+            RectangleShape textBackground = new RectangleShape(new Vector2f(300, 100));
+            textBackground.FillColor = Color.White;
+            textBackground.Position = new Vector2f(125, 125);
             #endregion
 
             bool wasRpressed = false;
@@ -59,17 +68,19 @@ namespace NoiseGenerator {
                 window.SetView(view);
 
 
-                window.Clear(Color.White);
+                window.Clear(CornflowerBlue);
 
+                #region Move Viewport
                 if (Keyboard.IsKeyPressed(Keyboard.Key.A)) {
                     view.Move(new Vector2f(-5, 0));
                 }
                 if (Keyboard.IsKeyPressed(Keyboard.Key.D)) {
                     view.Move(new Vector2f(5, 0));
                 }
+                #endregion
 
+                #region Change Line
                 bool changed = false; // does the noise need to be recalculated?
-
                 if (Keyboard.IsKeyPressed(Keyboard.Key.Up)) {
                     height += 1;
                     changed = true;
@@ -87,6 +98,14 @@ namespace NoiseGenerator {
                     spacing += 0.25f;
                     changed = true;
                 }
+                #endregion
+
+                #region Take Screenshot
+                bool takeScreenshot = false;
+                if (Keyboard.IsKeyPressed(Keyboard.Key.O)) {
+                    takeScreenshot = true;
+                }
+                #endregion
 
                 #region Recalculate Seed
                 bool isRpressed = Keyboard.IsKeyPressed(Keyboard.Key.R);
@@ -107,13 +126,16 @@ namespace NoiseGenerator {
                     underNoiseCurve = GetPointsUnderCurve(noiseCurve);
                     text.DisplayedString = String.Format("Current Spacing: {0}\nCurrent Height: {1}", spacing, height);
                 }
+
                 window.Draw(noiseCurve);
                 window.Draw(underNoiseCurve);
 
                 window.SetView(window.DefaultView);
+                window.Draw(textBackground);
                 window.Draw(text);
 
                 window.Display();
+                if (takeScreenshot) window.Capture().SaveToFile(@"..\..\screenshot.jpg");
             }
         }
     }
