@@ -50,9 +50,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Enviroment.cs" />
+    <Compile Include="Game.cs" />
     <Compile Include="Noise.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SimplexTerrain.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="font.otf">
