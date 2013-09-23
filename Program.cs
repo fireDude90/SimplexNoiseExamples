@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
 
 using SFML.Window;
 using SFML.Graphics;
@@ -11,6 +11,9 @@ namespace NoiseGenerator {
     class Program {
         #region Constants
         public static readonly Color CornflowerBlue = new Color(154, 206, 235);
+
+        private static bool IsAnimated = true;
+
         #endregion
 
         private static VertexArray GetNoiseCurve(float spacing, float height) {
@@ -24,6 +27,21 @@ namespace NoiseGenerator {
             return noiseCurve;
         }
 
+        private static List<VertexArray> GetAnimatedNoiseCurve(float spacing, float height, uint frames) {
+            int size = 500;
+            List<VertexArray> animation = new List<VertexArray>();
+            for (int y = 0; y <= frames; y++) {
+                animation.Add(new VertexArray(PrimitiveType.LinesStrip));
+                for (int x = 0; x <= size; x++) {
+                    float value = SimplexNoise.Noise.Generate(x / 20f, y / 20f);
+                    animation[y].Append(new Vertex(new Vector2f(x * spacing, value * height + 500), new Color(0, 200, 0, 255)));
+                    Console.WriteLine("Added vertice with {0} value", value);
+                }
+            }
+
+            return animation;
+        }
+
         private static VertexArray GetPointsUnderCurve(VertexArray array) {
             VertexArray result = new VertexArray(PrimitiveType.TrianglesStrip);
             for (uint i = 0; i < array.VertexCount; i++) {
@@ -35,12 +53,23 @@ namespace NoiseGenerator {
         }
 
         static void Main(string[] args) {
+            // Static/Animated Line Parameters
             float spacing = 5;
             int height = 50;
+
+            // Animated Parameters
+            float frameCounter = 0;
 
             VertexArray noiseCurve = GetNoiseCurve(spacing, height);
             VertexArray underNoiseCurve = GetPointsUnderCurve(noiseCurve);
 
+            if (IsAnimated) {
+                Stopwatch timer = new Stopwatch();
+                timer.Start();
+                List<VertexArray> animationNoiseCurve = GetAnimatedNoiseCurve(spacing, height, 120);
+                timer.Stop();
+                Console.WriteLine("Creating animation took {0} milliseconds", timer.ElapsedMilliseconds);
+            }
             #region Window/View
             RenderWindow window = new RenderWindow(new VideoMode(800, 600), "My Window");
             window.Closed += ((s, e) => window.Close());
@@ -69,6 +98,12 @@ namespace NoiseGenerator {
 
 
                 window.Clear(CornflowerBlue);
+                #region Take Screenshot
+                bool takeScreenshot = false;
+                if (Keyboard.IsKeyPressed(Keyboard.Key.O)) {
+                    takeScreenshot = true;
+                }
+                #endregion
 
                 #region Move Viewport
                 if (Keyboard.IsKeyPressed(Keyboard.Key.A)) {
@@ -79,56 +114,63 @@ namespace NoiseGenerator {
                 }
                 #endregion
 
+                #region Static Line Demo
                 #region Change Line
-                bool changed = false; // does the noise need to be recalculated?
-                if (Keyboard.IsKeyPressed(Keyboard.Key.Up)) {
-                    height += 1;
-                    changed = true;
-                }
-                if (Keyboard.IsKeyPressed(Keyboard.Key.Down)) {
-                    height -= 1;
-                    changed = true;
-                }
+                if (!IsAnimated) {
+                    bool changed = false; // does the noise need to be recalculated?
+                    if (Keyboard.IsKeyPressed(Keyboard.Key.Up)) {
+                        height += 1;
+                        changed = true;
+                    }
+                    if (Keyboard.IsKeyPressed(Keyboard.Key.Down)) {
+                        height -= 1;
+                        changed = true;
+                    }
 
-                if (Keyboard.IsKeyPressed(Keyboard.Key.Left)) {
-                    spacing -= 0.25f;
-                    changed = true;
-                }
-                if (Keyboard.IsKeyPressed(Keyboard.Key.Right)) {
-                    spacing += 0.25f;
-                    changed = true;
+                    if (Keyboard.IsKeyPressed(Keyboard.Key.Left)) {
+                        spacing -= 0.25f;
+                        changed = true;
+                    }
+                    if (Keyboard.IsKeyPressed(Keyboard.Key.Right)) {
+                        spacing += 0.25f;
+                        changed = true;
+                    }
+
+                #endregion
+
+                    #region Recalculate Seed
+                    bool isRpressed = Keyboard.IsKeyPressed(Keyboard.Key.R);
+                    if (isRpressed && !wasRpressed) {
+                        byte[] seed = new byte[512];
+                        new Random().NextBytes(seed);
+                        SimplexNoise.Noise.perm = seed;
+                        changed = true;
+                        wasRpressed = true;
+                    }
+                    else if (!isRpressed) {
+                        wasRpressed = false;
+                    }
+                    #endregion
+
+                    if (changed) {
+                        noiseCurve = GetNoiseCurve(spacing, height);
+                        underNoiseCurve = GetPointsUnderCurve(noiseCurve);
+                        text.DisplayedString = String.Format("Current Spacing: {0}\nCurrent Height: {1}", spacing, height);
+                    }
+
+
+                    window.Draw(noiseCurve);
+                    window.Draw(underNoiseCurve);
                 }
                 #endregion
 
-                #region Take Screenshot
-                bool takeScreenshot = false;
-                if (Keyboard.IsKeyPressed(Keyboard.Key.O)) {
-                    takeScreenshot = true;
-                }
-                #endregion
+                if (IsAnimated) {
+                    window.Draw(animationNoiseCurve[(int)frameCounter]);
+                    window.Draw(GetPointsUnderCurve(animationNoiseCurve[(int)frameCounter]));
 
-                #region Recalculate Seed
-                bool isRpressed = Keyboard.IsKeyPressed(Keyboard.Key.R);
-                if (isRpressed && !wasRpressed) {
-                    byte[] seed = new byte[512];
-                    new Random().NextBytes(seed);
-                    SimplexNoise.Noise.perm = seed;
-                    changed = true;
-                    wasRpressed = true;
+                    frameCounter += 0.5f;
+                    if (frameCounter > 120) frameCounter = 0; // reset animation
                 }
-                else if (!isRpressed) {
-                    wasRpressed = false;
-                }
-                #endregion
-
-                if (changed) {
-                    noiseCurve = GetNoiseCurve(spacing, height);
-                    underNoiseCurve = GetPointsUnderCurve(noiseCurve);
-                    text.DisplayedString = String.Format("Current Spacing: {0}\nCurrent Height: {1}", spacing, height);
-                }
-
-                window.Draw(noiseCurve);
-                window.Draw(underNoiseCurve);
 
                 window.SetView(window.DefaultView);
                 window.Draw(textBackground);
