@@ -11,6 +11,7 @@ namespace NoiseGenerator {
     class Program {
         #region Constants
         public static readonly Color CornflowerBlue = new Color(154, 206, 235);
+        public static readonly Color Brown = new Color(92, 64, 51);
 
         private static bool IsAnimated = true;
 
@@ -47,7 +48,7 @@ namespace NoiseGenerator {
             for (uint i = 0; i < array.VertexCount; i++) {
                 Vertex vertex = array[i];
                 result.Append(vertex); // top vertex
-                result.Append(new Vertex(new Vector2f(vertex.Position.X, 600), new Color(92, 64, 51))); // vertex at bottom of screen 
+                result.Append(new Vertex(new Vector2f(vertex.Position.X, 600), Brown)); // vertex at bottom of screen 
             }
             return result;
         }
@@ -59,14 +60,17 @@ namespace NoiseGenerator {
 
             // Animated Parameters
             float frameCounter = 0;
+            bool reversed = false;
+            uint frames = 120;
 
             VertexArray noiseCurve = GetNoiseCurve(spacing, height);
             VertexArray underNoiseCurve = GetPointsUnderCurve(noiseCurve);
 
+            List<VertexArray> animatedNoiseCurve = null;
             if (IsAnimated) {
                 Stopwatch timer = new Stopwatch();
                 timer.Start();
-                List<VertexArray> animationNoiseCurve = GetAnimatedNoiseCurve(spacing, height, 120);
+                animatedNoiseCurve = GetAnimatedNoiseCurve(spacing, height, frames);
                 timer.Stop();
                 Console.WriteLine("Creating animation took {0} milliseconds", timer.ElapsedMilliseconds);
             }
@@ -165,11 +169,18 @@ namespace NoiseGenerator {
                 #endregion
 
                 if (IsAnimated) {
-                    window.Draw(animationNoiseCurve[(int)frameCounter]);
-                    window.Draw(GetPointsUnderCurve(animationNoiseCurve[(int)frameCounter]));
+                    window.Draw(animatedNoiseCurve[(int)frameCounter]);
+                    window.Draw(GetPointsUnderCurve(animatedNoiseCurve[(int)frameCounter]));
 
-                    frameCounter += 0.5f;
-                    if (frameCounter > 120) frameCounter = 0; // reset animation
+                    if (reversed) {
+                        frameCounter -= 0.5f;
+                    }
+                    else {
+                        frameCounter += 0.5f;
+                    }
+
+                    if (frameCounter > 120) reversed = true;
+                    else if (frameCounter < 0) reversed = false;
                 }
 
                 window.SetView(window.DefaultView);
